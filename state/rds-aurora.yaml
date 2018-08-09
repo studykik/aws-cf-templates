@@ -133,8 +133,8 @@ Resources:
       GroupDescription: !Ref 'AWS::StackName'
       SecurityGroupIngress:
       - IpProtocol: tcp
-        FromPort: 3306
-        ToPort: 3306
+        FromPort: 5432
+        ToPort: 5432
         SourceSecurityGroupId: {'Fn::ImportValue': !Sub '${ParentClientStack}-ClientSecurityGroup'}
       VpcId: {'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'}
   ClusterSecurityGroupInSSHBastion:
@@ -143,8 +143,8 @@ Resources:
     Properties:
       GroupId: !Ref ClusterSecurityGroup
       IpProtocol: tcp
-      FromPort: 3306
-      ToPort: 3306
+      FromPort: 5432
+      ToPort: 5432
       SourceSecurityGroupId: {'Fn::ImportValue': !Sub '${ParentSSHBastionStack}-SecurityGroup'}
   Key:
     Condition: HasEncryptionAndNotDBSnapshotIdentifier
@@ -185,26 +185,27 @@ Resources:
     Properties:
       DBSubnetGroupDescription: !Ref 'AWS::StackName'
       SubnetIds: !Split [',', {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetsPrivate'}]
-  DBClusterParameterGroup:
-    Type: 'AWS::RDS::DBClusterParameterGroup'
-    Properties:
-      Description: !Ref 'AWS::StackName'
-      Family: 'aurora5.6'
-      Parameters:
-        character_set_client: utf8
-        character_set_database: utf8
-        character_set_filesystem: utf8
-        character_set_server: utf8
-        collation_server: utf8_general_ci
+  #DBClusterParameterGroup:
+  #  Type: 'AWS::RDS::DBClusterParameterGroup'
+  #  Properties:
+  #    Description: !Ref 'AWS::StackName'
+  #    Family: 'aurora5.6'
+  #    Parameters:
+  #      character_set_client: utf8
+  #      character_set_database: utf8
+  #      character_set_filesystem: utf8
+  #      character_set_server: utf8
+  #      collation_server: utf8_general_ci
   DBCluster:
     Type: 'AWS::RDS::DBCluster'
+    DeletionPolicy: Delete
     Properties:
       BackupRetentionPeriod: !Ref DBBackupRetentionPeriod
       DatabaseName: !If [HasDBSnapshotIdentifier, !Ref 'AWS::NoValue', !Ref DBName]
-      DBClusterParameterGroupName: !Ref DBClusterParameterGroup
+      DBClusterParameterGroupName: default.aurora-postgresql9.6
       DBSubnetGroupName: !Ref DBSubnetGroup
-      Engine: aurora
-      EngineVersion: '5.6.10a'
+      Engine: aurora-postgresql
+      EngineVersion: '9.6.8'
       KmsKeyId: !If [HasEncryptionAndNotDBSnapshotIdentifier, !Ref Key, !Ref 'AWS::NoValue']
       MasterUsername: !If [HasDBSnapshotIdentifier, !Ref 'AWS::NoValue', !Ref DBMasterUsername]
       MasterUserPassword: !If [HasDBSnapshotIdentifier, !Ref 'AWS::NoValue', !Ref DBMasterUserPassword]
@@ -218,11 +219,7 @@ Resources:
     Type: 'AWS::RDS::DBParameterGroup'
     Properties:
       Description: !Ref 'AWS::StackName'
-      Family: 'aurora5.6'
-      Parameters:
-        innodb_lock_wait_timeout: '10'
-        log_output: FILE
-        tx_isolation: 'READ-COMMITTED'
+      Family: 'aurora-postgresql9.6'
   DBInstanceA:
     Type: 'AWS::RDS::DBInstance'
     Properties:
@@ -233,7 +230,7 @@ Resources:
       DBInstanceClass: !Ref DBInstanceClass
       DBParameterGroupName: !Ref DBParameterGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
-      Engine: aurora
+      Engine: aurora-postgresql
   DBInstanceB:
     Type: 'AWS::RDS::DBInstance'
     Properties:
@@ -244,7 +241,7 @@ Resources:
       DBInstanceClass: !Ref DBInstanceClass
       DBParameterGroupName: !Ref DBParameterGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
-      Engine: aurora
+      Engine: aurora-postgresql
   DatabaseACPUUtilizationTooHighAlarm:
     Condition: HasAlertTopic
     Type: 'AWS::CloudWatch::Alarm'
