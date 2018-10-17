@@ -191,7 +191,7 @@ Resources:
         InstanceCount: !Ref ClusterInstanceCount
         InstanceType: !Ref ClusterInstanceType
         ZoneAwarenessEnabled: !If [HasSingleClusterInstance, false, true]
-      ElasticsearchVersion: '5.5'
+      ElasticsearchVersion: '6.3'
       EncryptionAtRestOptions: !If [HasEncryption, {Enabled: true, KmsKeyId: !Ref Key}, !Ref 'AWS::NoValue']
       SnapshotOptions:
         AutomatedSnapshotStartHour: 10
